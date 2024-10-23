@@ -1,0 +1,124 @@
+name: Test
+on:
+  workflow_call:
+    inputs:
+      is-workflow-call:
+        type: boolean
+        required: true
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - .github/CODE_OF_CONDUCT.md
+      - .github/CODEOWNERS
+      - .github/dependabot.yml
+      - .github/FUNDING.yml
+      - .github/workflows/release.yml
+      - LICENSE
+      - .gitignore
+  pull_request:
+    paths-ignore:
+      - .github/CODE_OF_CONDUCT.md
+      - .github/CODEOWNERS
+      - .github/dependabot.yml
+      - .github/FUNDING.yml
+      - .github/workflows/release.yml
+      - LICENSE
+      - .gitignore
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: --deny warnings
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ !inputs.is-workflow-call }}
+
+jobs:
+  doc:
+    name: Doc build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Init toolchain
+        uses: alorel-actions/cargo/init@v1
+        id: toolchain
+        with:
+          toolchain: nightly-2024-10-18
+          cache-prefix: doc
+          local: true
+
+      - name: Doc
+        run: cargo doc --workspace --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: --cfg doc_cfg --deny warnings
+
+      - name: Cleanup
+        run: rm -rf target/doc
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Init toolchain
+        uses: alorel-actions/cargo/init@v1
+        id: toolchain
+        with:
+          components: rustfmt,clippy
+          cache-prefix: lint
+          local: true
+
+      - name: Fmt
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --tests --all-features --locked --no-deps
+
+  test:
+    name: Test for ${{ matrix.toolchain }} on ${{ matrix.os }}
+    uses: ./.github/workflows/unit-test.yml
+    with:
+      toolchain: ${{ matrix.toolchain }}
+      os: ${{ matrix.os }}
+      flags: --all-features
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: nightly-2024-10-18
+            os: ubuntu-latest
+
+          - toolchain: 1.75.0
+            os: ubuntu-latest
+
+          - toolchain: stable
+            os: macos-latest
+
+          - toolchain: stable
+            os: ubuntu-latest
+
+  done:
+    name: All tests
+    runs-on: ubuntu-latest
+    needs:
+      - doc
+      - lint
+      - test
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Generate changelog
+        id: changelog
+        uses: ./.github/actions/changelog

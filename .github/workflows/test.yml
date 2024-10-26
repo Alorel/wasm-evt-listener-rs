@@ -1,10 +1,6 @@
 name: Test
 on:
-  workflow_call:
-    inputs:
-      is-workflow-call:
-        type: boolean
-        required: true
+  workflow_call: { }
   push:
     branches:
       - master
@@ -32,10 +28,6 @@ permissions:
 env:
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: --deny warnings
-
-concurrency:
-  group: test-${{ github.ref }}
-  cancel-in-progress: ${{ !inputs.is-workflow-call }}
 
 jobs:
   doc:

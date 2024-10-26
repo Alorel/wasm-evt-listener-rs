@@ -1,6 +1,6 @@
 [package]
 name = "wasm_evt_listener"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 rust-version = "1.75.0"
@@ -13,6 +13,10 @@ include = [
   "src/",
   "Cargo.toml",
 ]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
 
 [features]
 streams = ["dep:futures-core"]
@@ -47,10 +51,6 @@ tokio = { workspace = true, features = ["macros"] }
 tokio-util = "0.7.12"
 web-sys = { workspace = true, features = ["CustomEvent", "CustomEventInit", "Element", "Document", "Window"] }
 wasm-bindgen-test = "0.3.45"
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "doc_cfg"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
